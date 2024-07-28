@@ -4,6 +4,7 @@ import math
 import datetime
 
 from ray import Ray
+from hittable import Hittable
 
 class Camera:
     '''
@@ -45,7 +46,7 @@ class Camera:
         self.uMin = -self.uMax
         # print("U span: " + str(self.uMax - self.uMin))
 
-        self.img = np.ones((self.imgHeight, self.imgWidth))
+        self.img = np.zeros((self.imgHeight, self.imgWidth, 3))
 
 
     def dispImg(self):
@@ -60,17 +61,20 @@ class Camera:
         plt.axis('off')
         plt.savefig("renders\\test" + t + ".png", bbox_inches='tight')
 
-    def render(self, ball):
+    def render(self, world):
         du = (self.uMax - self.uMin)/self.imgWidth
         dv = (self.vMax - self.vMin)/self.imgHeight
         for i in range(self.imgHeight):
             for j in range(self.imgWidth):
-                ray = Ray(self.pos, [self.focalLen, self.uMin + du*j, self.vMin + du*i])
-                hit = ball.hit(ray)
-                if hit > 0:
-                    self.img[i, j] = hit
+                ray = Ray(self.pos, [self.focalLen, self.uMin + du*j, self.vMin + dv*i])
+                hit, tmp = world.hit(ray)
+                if hit:
+                    (dist, id) = tmp
+                    ball = world.hittables[id]
+                    n = Ray(ray.start, ray.start + dist*ray.unit() - ball.center)
+                    self.img[i, j] = 0.5 * (n.vec + [1, 1, 1])
                 else:
-                    self.img[i, j] = 0.1
+                    self.img[i, j] = np.array([j/self.imgWidth, i/self.imgHeight, 1])
             print(str(self.imgHeight - i) + " rows left")
 
         print("Finished rendering. Saving...")

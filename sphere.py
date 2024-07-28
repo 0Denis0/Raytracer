@@ -9,7 +9,7 @@ class Sphere:
         self.center = np.array(center)
 
     def normal(self, intersectionPt):
-        return intersectionPt - self.center
+        return (intersectionPt - self.center)/self.r
     
     def hit(self, ray):
         rel = self.center - ray.start
@@ -24,7 +24,7 @@ class Sphere:
             # no hit
             return -1
         else:
-            return (-b - math.sqrt(b**2 - 4*a*c))/(2*a)
+            return min(-b - math.sqrt(discriminant), -b + math.sqrt(discriminant))/(2*a)
         
 
     
