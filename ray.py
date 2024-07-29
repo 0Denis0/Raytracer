@@ -30,4 +30,17 @@ class Ray:
     def mag(self) -> int:
         return np.linalg.norm(self.vec)
     
+    def randInSphere(self):
+        while True:
+            temp = np.random.random((1,3))
+            if np.vdot(temp,temp) <= 1:
+                return temp
     
+    def randOnHemisphere(self, normal):
+        vec = self.randInSphere()
+        vec = vec/np.linalg.norm(vec)
+        if np.vdot(normal, vec) > 0:
+            return vec
+        else:
+            return -vec
+

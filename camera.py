@@ -5,6 +5,7 @@ import datetime
 
 from ray import Ray
 from hittable import Hittable
+import materials
 
 class Camera:
     '''
@@ -30,7 +31,9 @@ class Camera:
 
     TBD
     '''
-    def __init__(self, position = [0,0,0], angle = [0,0,0], vFOV = 90, aspectRatio = 16/9, imgWidth = 100, focalLen = 1) -> None:
+    def __init__(self, position = [0,0,0], angle = [0,0,0], 
+                 vFOV = 90, aspectRatio = 16/9, imgWidth = 100, 
+                 focalLen = 1, maxDepth = 10) -> None:
         self.pos = np.array(position)
         self.angle = np.array(angle)
         self.vFOV = vFOV
@@ -45,6 +48,7 @@ class Camera:
         self.uMax = aspectRatio*self.vMax
         self.uMin = -self.uMax
         # print("U span: " + str(self.uMax - self.uMin))
+        self.maxDepth = maxDepth
 
         self.img = np.zeros((self.imgHeight, self.imgWidth, 3))
 
@@ -71,10 +75,14 @@ class Camera:
                 if hit:
                     (dist, id) = tmp
                     ball = world.hittables[id]
-                    n = Ray(ray.start, ray.start + dist*ray.unit() - ball.center)
-                    self.img[i, j] = 0.5 * (n.vec + [1, 1, 1])
+                    # n = Ray(ray.start, ray.start + dist*ray.unit() - ball.center)
+                    # n = ball.normal(ray.start + dist*ray.unit())
+                    self.img[i, j] = np.sqrt(self.rayColor(ray, world, 10))
+                    # self.img[i,j] = 0.5*(np.array([-n[1], n[2], n[0]]) + [1, 1, 1])
                 else:
-                    self.img[i, j] = np.array([j/self.imgWidth, i/self.imgHeight, 1])
+                    # self.img[i, j] = np.array([j/self.imgWidth, i/self.imgHeight, 1])
+                    a = 0.5 * (-ray.unit()[2] + 1.0)
+                    self.img[i,j] = np.sqrt(list((1.0 - a)*np.array([1, 1, 1]) + a * np.array([0.5, 0.7, 1.0])))
             print(str(self.imgHeight - i) + " rows left")
 
         print("Finished rendering. Saving...")
@@ -82,3 +90,19 @@ class Camera:
         self.saveImg()
         print("Saved.")
 
+    def rayColor(self, ray, world, depth):
+        if depth <= 0:
+            return [0, 0, 0]
+        
+        hitSmth, hitData = world.hit(ray)
+        if hitSmth:
+            dist, id = hitData
+            hitPt = ray.start + dist*ray.unit()
+            obj = world.hittables[id]
+            n = obj.normal(hitPt)
+            mat = obj.material
+            newRay = Ray(hitPt, world.hittables[id].material.reflect(ray, n))
+            return mat.albedo * np.array(self.rayColor(newRay, world, depth-1))
+        else:
+            a = 0.5 * (-np.ravel(ray.unit())[2] + 1.0)
+            return (1.0 - a)*np.array([1, 1, 1]) + a * np.array([0.5, 0.7, 1.0])

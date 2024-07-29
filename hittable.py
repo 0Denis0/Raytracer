@@ -17,7 +17,7 @@ class Hittable:
 
         for i, obj in enumerate(self.hittables):
             currHit = obj.hit(ray)
-            if(currHit > 0):
+            if(currHit > 0.00001):
                  hitAnything = True
                  if currHit < tempClosest:
                      tempClosest = currHit
