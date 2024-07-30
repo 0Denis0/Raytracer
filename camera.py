@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import math
 import datetime
+from multiprocessing import Pool, cpu_count
 
 from ray import Ray
 from hittable import Hittable
@@ -52,7 +53,6 @@ class Camera:
 
         self.img = np.zeros((self.imgHeight, self.imgWidth, 3))
 
-
     def dispImg(self):
         plt.imshow(self.img)
         plt.axis('off')
@@ -86,9 +86,10 @@ class Camera:
             print(str(self.imgHeight - i) + " rows left")
 
         print("Finished rendering. Saving...")
-        self.dispImg()
         self.saveImg()
         print("Saved.")
+        self.dispImg()
+
 
     def rayColor(self, ray, world, depth):
         if depth <= 0:
@@ -101,7 +102,7 @@ class Camera:
             obj = world.hittables[id]
             n = obj.normal(hitPt)
             mat = obj.material
-            newRay = Ray(hitPt, world.hittables[id].material.reflect(ray, n))
+            newRay = Ray(hitPt, mat.reflect(ray, n))
             return mat.albedo * np.array(self.rayColor(newRay, world, depth-1))
         else:
             a = 0.5 * (-np.ravel(ray.unit())[2] + 1.0)
