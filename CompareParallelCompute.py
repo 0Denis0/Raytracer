@@ -29,15 +29,33 @@ def main():
     world.add(ball4)
     # world.add(ball5)
 
-    cam1 = Camera(maxDepth=10, imgWidth=8192)
+    # ray1 = Ray(cam1.pos, ball1.center)
+    # ball1.hit(ray1)
+    dataPts = 100
+    results = np.zeros((dataPts, 3))
+    for i in range(dataPts):
+        width = i*16 + 16
+        cam1 = Camera(maxDepth=10, imgWidth=width)
+        cam1.imgWidth = width
 
-    start = time.time()
-    cam1.renderParallel(world)
-    end = time.time()
-    parallel_t = end - start
+        start = time.time()
+        cam1.render(world, save=False)
+        end = time.time()
+        classic_t = end - start
 
-    print("Frame render time:", parallel_t)
+        start = time.time()
+        cam1.renderParallel(world, save=False)
+        end = time.time()
+        parallel_t = end - start
 
+        results[i] = [width, classic_t, parallel_t]
+
+    plt.plot(results[:, 0], results[:, 1], label='Serial Compute')
+    plt.plot(results[:, 0], results[:, 2], label='Parallel Compute')
+    plt.xlabel("Image Width [px]")
+    plt.ylabel("Time To Render [s]")
+    plt.legend()
+    plt.show()
     # print(cam1.img[int(cam1.imgHeight/2), :])
 
 if __name__ == '__main__':

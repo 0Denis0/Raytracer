@@ -14,8 +14,10 @@ class Sphere:
         self.material = material
 
     def normal(self, intersectionPt):
-        # n = np.ravel(-(intersectionPt - self.center)/self.r)
-        # return [-n[1], n[2], n[0]]
+        # n = np.ravel((intersectionPt - self.center)/self.r)
+        # return np.array([n[2], -n[1], -n[0]])
+        # # return np.array([-n[2], n[1], -n[0]])
+        # # return np.array([-n[2], n[1], n[0]])
         return (intersectionPt - self.center)/self.r
     
     def hit(self, ray):
@@ -31,7 +33,8 @@ class Sphere:
             # no hit
             return -1
         else:
-            return min(-b - math.sqrt(discriminant), -b + math.sqrt(discriminant))/(2*a)
+            sqrt = math.sqrt(discriminant)
+            return 0.5*(-b - sqrt)/a
         
 
     
