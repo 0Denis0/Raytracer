@@ -32,8 +32,8 @@ class Ray:
     
     def randInSphere(self):
         while True:
-            temp = np.random.random((1,3))
-            if np.vdot(temp,temp) <= 1:
+            temp = 2 * np.random.random((1,3)) - 1
+            if np.vdot(temp,temp) < 1:
                 return temp
     
     def randOnHemisphere(self, normal):

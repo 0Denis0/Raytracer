@@ -15,7 +15,7 @@ class Sphere:
 
     def normal(self, intersectionPt):
         # n = np.ravel((intersectionPt - self.center)/self.r)
-        # return np.array([n[2], -n[1], -n[0]])
+        # return np.array([-n[0], n[1], n[2]])
         # # return np.array([-n[2], n[1], -n[0]])
         # # return np.array([-n[2], n[1], n[0]])
         return (intersectionPt - self.center)/self.r
