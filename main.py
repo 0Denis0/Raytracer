@@ -9,6 +9,7 @@ from ray import Ray
 from sphere import Sphere
 from hittable import Hittable
 import materials
+from genVideo import genVideo
 
 def main():
     world = Hittable()
@@ -29,17 +30,21 @@ def main():
     world.add(ball4)
     # world.add(ball5)
 
-    cam1 = Camera(maxDepth=10, imgWidth=480, vFOV=90)
-
+    cam1 = Camera(maxDepth=10, imgWidth=720, vFOV=90)
+    folder = "renders/vid2/"
     start = time.time()
-    cam1.renderParallel(world)
+    for i in range(240):
+        cam1.updateVars(position=cam1.lookAt + [-8*np.cos(i*0.05), -8*np.sin(i*0.05), -2])
+        cam1.renderParallel(world, save=False)
+        frameNum = f"{i:04d}"
+        cam1.saveImg(folder, name=f"frame{frameNum}.png")
     end = time.time()
     parallel_t = end - start
 
     print("Frame render time:", parallel_t)
-    cam1.dispImg()
+    # cam1.dispImg()
 
-    # print(cam1.img[int(cam1.imgHeight/2), :])
+    genVideo("renders/vid2", "renders/vid/motion.avi")
 
 if __name__ == '__main__':
     main()
