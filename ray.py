@@ -30,6 +30,9 @@ class Ray:
     def mag(self) -> int:
         return np.linalg.norm(self.vec)
     
+    def at(self, t):
+        return self.start + self.vec * t
+    
     def randInSphere(self):
         while True:
             temp = 2 * np.random.random((1,3)) - 1

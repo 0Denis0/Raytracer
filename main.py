@@ -14,7 +14,7 @@ from genVideo import genVideo
 def main():
     world = Hittable()
     ball1 = Sphere(1,   [3, -0.75, 0], material=materials.Metal(albedo=[0.5, 0.5, 0.5]))
-    ball2 = Sphere(100, [3,  0,  101], material=materials.Lambertian(albedo=[0.7, 0.7, 0.7]))
+    ball2 = Sphere(1000, [3,  0,  1001], material=materials.Lambertian(albedo=[0.7, 0.7, 0.7]))
     ball3 = Sphere(1,   [5,  1,   -1], material=materials.Metal(albedo=[0.9, 0.9, 0]))
     ball4 = Sphere(2,   [2, -3,   -1], material=materials.Material(albedo=[0.9, 0.2, 0.9]))
 
@@ -24,17 +24,23 @@ def main():
     # ball4 = Sphere(100, [3, -105, 0], material=materials.Material(albedo=[0.9, 0, 0]))
     # ball5 = Sphere(1, [3, 0, 0], material=materials.Material(albedo=[5, 5, 5]))
 
+    # ball = Sphere(0.5, [1, 0, 0])
+    # world.add(ball)
+
     world.add(ball1)
     world.add(ball2)
     world.add(ball3)
     world.add(ball4)
     # world.add(ball5)
 
-    cam1 = Camera(maxDepth=10, imgWidth=720, vFOV=90)
-    folder = "renders/vid2/"
+    cam1 = Camera(maxDepth=10, imgWidth=1920, vFOV=90)
+    # cam1.renderSimple(world)
+    # cam1.dispImg()
+    folder = "renders/vid4/"
     start = time.time()
+    speed = 0.05
     for i in range(240):
-        cam1.updateVars(position=cam1.lookAt + [-8*np.cos(i*0.05), -8*np.sin(i*0.05), -2])
+        cam1.updateVars(position=cam1.lookAt + [-8*np.cos(i*speed), -8*np.sin(i*speed), -2])
         cam1.renderParallel(world, save=False)
         frameNum = f"{i:04d}"
         cam1.saveImg(folder, name=f"frame{frameNum}.png")
@@ -44,7 +50,7 @@ def main():
     print("Frame render time:", parallel_t)
     # cam1.dispImg()
 
-    genVideo("renders/vid2", "renders/vid/motion.avi")
+    genVideo("renders/vid4", "renders/vid4/motion.avi")
 
 if __name__ == '__main__':
     main()

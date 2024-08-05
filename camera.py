@@ -85,10 +85,6 @@ class Camera:
         plt.savefig(dir + name, bbox_inches='tight')
         print("Saved.")
 
-    def render_line_helper(self, args):
-        world, row, du, dv = args
-        return self.renderLine(world, row, du, dv)
-
     def renderParallel(self, world, save=True):
         du = self.viewU/self.imgWidth
         dv = self.viewV/self.imgHeight
@@ -105,6 +101,9 @@ class Camera:
         if save:
             self.saveImg()
 
+    def render_line_helper(self, args):
+        world, row, du, dv = args
+        return self.renderLine(world, row, du, dv)
 
     def renderLine(self, world, row, du, dv):
         i = row
@@ -117,6 +116,21 @@ class Camera:
         print(f"Rendered row {i}.")
         return imRow
 
+    def renderSimple(self, world):
+        du = self.viewU/self.imgWidth
+        dv = self.viewV/self.imgHeight
+        for i in range(self.imgHeight):
+            for j in range(self.imgWidth):
+                ray = Ray(self.position, 
+                          -self.focalLen * self.w 
+                          - 0.5 * self.viewU + du*j
+                           - 0.5 * self.viewV + dv*i)
+                self.img[i, j] = (self.rayColor(ray, world, self.maxDepth))
+                # np.sqrt for linear space. 
+
+            print(f"Rendered row {i}")
+        self.saveImg()
+        
     def rayColor(self, ray, world, depth):
         if depth <= 0:
             return [0, 0, 0]
@@ -124,15 +138,15 @@ class Camera:
         hitSmth, hitData = world.hit(ray)
         if hitSmth:
             dist, id = hitData
-            hitPt = ray.start + dist*ray.unit()
+            hitPt = ray.at(dist)
             obj = world.hittables[id]
             n = obj.normal(hitPt)
             mat = obj.material
             if (mat.albedo > 1).any():
                 return mat.albedo
-            newRay = Ray(hitPt, mat.reflect(ray, n))
+            newRay = Ray(hitPt, hitPt + mat.reflect(ray, n))
             return mat.albedo * np.array(self.rayColor(newRay, world, depth-1))
         else:
             # return np.array([0,0,0])
-            a = 0.5 * (np.ravel(-ray.unit())[2] + 1.0)
+            a = 0.5 * (-np.ravel(ray.unit())[2] + 1.0)
             return (1.0 - a)*np.array([1, 1, 1]) + a * np.array([0.5, 0.7, 1.0])

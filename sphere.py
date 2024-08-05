@@ -29,7 +29,7 @@ class Sphere:
 
         discriminant = b**2 - 4*a*c
 
-        if discriminant < 0.00001:
+        if discriminant < 0.0001:
             # no hit
             return -1
         else:
