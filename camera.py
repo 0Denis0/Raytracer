@@ -5,6 +5,7 @@ import math
 import datetime
 from multiprocessing import Pool, cpu_count
 from functools import partial
+import tqdm
 
 from ray import Ray
 from hittable import Hittable
@@ -37,7 +38,7 @@ class Camera:
 
     def __init__(self, position = [0,0,0], lookAt = [1,0,0], vUp = [0, 0, -1],
                  vFOV = 90, aspectRatio = 16/9, imgWidth = 100, 
-                 maxDepth = 10) -> None:
+                 maxDepth = 10, raysPerPixel = 1) -> None:
         self.position = np.array(position)
         self.lookAt = np.array(lookAt)
         self.vUp = np.array(vUp)
@@ -45,6 +46,7 @@ class Camera:
         self.aspectRatio = aspectRatio
         self.imgWidth = imgWidth
         self.maxDepth = maxDepth
+        self.raysPerPixel = raysPerPixel
         self.recalculate()
 
     def recalculate(self):
@@ -88,32 +90,38 @@ class Camera:
     def renderParallel(self, world, save=True):
         du = self.viewU/self.imgWidth
         dv = self.viewV/self.imgHeight
-        args_list = [(world, i, du, dv) for i in range(self.imgHeight)]
+        args_list = [(world, i, du, dv, self.raysPerPixel) for i in range(self.imgHeight)]
         
-        with Pool() as pool:
-            results = pool.map(self.render_line_helper, args_list)
-        
+        pool = Pool()
+        results = []
+        for result in tqdm.tqdm(pool.imap(self.render_line_helper, args_list), total=len(args_list)):
+            results.append(result)
+        pool.close()
+        pool.join()
+
         # Combine results into the image array
-        for i, result in enumerate(results):
-            self.img[i] = result
+        for i, row in enumerate(results):
+            self.img[i] = row
         
         print("Finished rendering.")
         if save:
             self.saveImg()
 
     def render_line_helper(self, args):
-        world, row, du, dv = args
-        return self.renderLine(world, row, du, dv)
+        world, row, du, dv, raysPerPixel = args
+        return self.renderLine(world, row, du, dv, raysPerPixel)
 
-    def renderLine(self, world, row, du, dv):
+    def renderLine(self, world, row, du, dv, raysPerPixel):
         i = row
         imRow = np.zeros((1, self.imgWidth, 3))
         for j in range(self.imgWidth):
+            for _ in range(raysPerPixel):
                 ray = Ray(self.position, -self.focalLen * self.w 
-                          - 0.5 * self.viewU + du*j
-                           - 0.5 * self.viewV + dv*i)
-                imRow[0, j] = np.sqrt(self.rayColor(ray, world, self.maxDepth))
-        print(f"Rendered row {i}.")
+                        - 0.5 * self.viewU + du*(j + np.random.random())
+                        - 0.5 * self.viewV + dv*(i + np.random.random()))
+                imRow[0, j] += np.sqrt(self.rayColor(ray, world, self.maxDepth))
+        imRow = imRow/raysPerPixel
+        # print(f"Rendered row {i}.")
         return imRow
 
     def renderSimple(self, world):
