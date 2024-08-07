@@ -6,12 +6,13 @@ from sphere import Sphere
 from hittable import Hittable
 import materials
 from genVideo import genVideo
+import time
 
 def main():
     world = Hittable()
     ball1 = Sphere(1,   [3, -0.75, 0], material=materials.Metal(albedo=[0.5, 0.5, 0.5]))
     ball2 = Sphere(1000, [3,  0,  1001], material=materials.Lambertian(albedo=[0.7, 0.7, 0.7]))
-    ball3 = Sphere(1,   [5,  1,   -1], material=materials.Metal(albedo=[0.9, 0.9, 0]))
+    ball3 = Sphere(1,   [5,  1,   -1], material=materials.Metal(roughness=0, albedo=[0.9, 0.9, 0.9]))
     ball4 = Sphere(2,   [2, -3,   -1], material=materials.Material(albedo=[0.9, 0.2, 0.9]))
     ball5 = Sphere(0.25, [2.5, -1.5, 0.75], material=materials.Lambertian(albedo=[5, 5, 5]))
     # ball1 = Sphere(100, [105, 0, 95], material=materials.Material(albedo=[0.9, 0.9, 0.9]))
@@ -27,7 +28,7 @@ def main():
     world.add(ball4)
     world.add(ball5)
 
-    cam1 = Camera(maxDepth=100, imgWidth=1920, vFOV=90, raysPerPixel=100)
+    cam1 = Camera(maxDepth=800, imgWidth=1920, vFOV=90, raysPerPixel=255)
     # # cam1.renderSimple(world)
     # # cam1.dispImg()
     # folder = "renders/vid4/"
@@ -45,7 +46,10 @@ def main():
     # # cam1.dispImg()
 
     # genVideo("renders/vid4", "renders/vid4/motion.avi")
+    start = time.time()
     cam1.renderParallel(world)
+    tot = time.time() - start
+    print(f"Total render time: {tot}.")
     cam1.dispImg()
 
 if __name__ == '__main__':

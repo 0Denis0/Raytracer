@@ -119,7 +119,7 @@ class Camera:
                 ray = Ray(self.position, -self.focalLen * self.w 
                         - 0.5 * self.viewU + du*(j + np.random.random())
                         - 0.5 * self.viewV + dv*(i + np.random.random()))
-                imRow[0, j] += np.sqrt(self.rayColor(ray, world, self.maxDepth))
+                imRow[0, j] += np.clip(np.sqrt(self.rayColor(ray, world, self.maxDepth)), 0, 1)
         imRow = imRow/raysPerPixel
         # print(f"Rendered row {i}.")
         return imRow
@@ -158,3 +158,4 @@ class Camera:
             # return np.array([0,0,0])
             a = 0.5 * (-np.ravel(ray.unit())[2] + 1.0)
             return (1.0 - a)*np.array([1, 1, 1]) + a * np.array([0.5, 0.7, 1.0])
+        
