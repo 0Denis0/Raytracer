@@ -135,36 +135,37 @@ class Camera:
         """
         i = row
         imRow = np.zeros((1, self.imgWidth, 3))
-        
-        # Generate j values for each pixel in the row
+
+        # Generate pixel indices for the entire row
         j_values = np.arange(self.imgWidth)
         
-        # Generate random samples for anti-aliasing (raysPerPixel samples per pixel)
+        # Create jitter for anti-aliasing: random values for each ray within each pixel
         jitter_j = j_values[:, None] + np.random.random((self.imgWidth, raysPerPixel))
         jitter_i = i + np.random.random((self.imgWidth, raysPerPixel))
         
         # Compute ray directions for the entire row at once
-        ray_directions = (-self.focalLen * self.w 
-                        - 0.5 * self.viewU + du * jitter_j 
+        ray_directions = (-self.focalLen * self.w
+                        - 0.5 * self.viewU + du * jitter_j
                         - 0.5 * self.viewV + dv * jitter_i)
         
         # Normalize ray directions
         ray_directions = ray_directions / np.linalg.norm(ray_directions, axis=-1, keepdims=True)
         
-        # Create an array of rays for each pixel
-        rays = [Ray(self.position, direction) for direction in ray_directions.reshape(-1, 3)]
+        # Create Ray objects (vectorized)
+        ray_origins = np.tile(self.position, (self.imgWidth * raysPerPixel, 1))  # Same origin for all rays
+        ray_directions = ray_directions.reshape(-1, 3)  # Flatten to get (total_rays, 3)
+        rays = [Ray(ray_origins[i], ray_directions[i]) for i in range(len(ray_origins))]
         
-        # Compute ray colors for all rays in a vectorized way
-        colors = np.array([self.rayColor(ray, world, self.maxDepth) for ray in rays])
+        # Call the vectorized rayColor function with all the rays
+        colors = self.rayColor(rays, world, self.maxDepth)
         
-        # Reshape colors back to (imgWidth, raysPerPixel, 3) and average over raysPerPixel
+        # Reshape the colors back to (imgWidth, raysPerPixel, 3)
         colors = colors.reshape(self.imgWidth, raysPerPixel, 3)
         
-        # Average colors over the raysPerPixel
+        # Average over raysPerPixel to get the final color for each pixel
         imRow[0] = np.clip(np.sqrt(np.mean(colors, axis=1)), 0, 1)
-
+        
         return imRow
-
 
     def renderSimple(self, world):
         du = self.viewU/self.imgWidth
@@ -181,23 +182,77 @@ class Camera:
             print(f"Rendered row {i}")
         self.saveImg()
         
-    def rayColor(self, ray, world, depth):
-        if depth <= 0:
-            return [0, 0, 0]
+    def rayColor(self, rays, world, depth):
+        """
+        Vectorized version of rayColor to handle multiple rays in parallel.
+
+        Parameters:
+        -----------
+        rays : np.ndarray
+            Array of rays to be processed. Each ray is represented by its origin and direction.
+        world : World
+            The scene or world containing objects and lights.
+        depth : int
+            Maximum recursion depth for reflections.
+
+        Returns:
+        --------
+        colors : np.ndarray
+            Array of colors computed for each input ray.
+        """
+        num_rays = len(rays)
+        colors = np.zeros((num_rays, 3))  # Initialize color array for each ray
         
-        hitSmth, hitData = world.hit(ray)
-        if hitSmth:
-            dist, id = hitData
-            hitPt = ray.at(dist)
-            obj = world.hittables[id]
-            n = obj.normal(hitPt)
-            mat = obj.material
-            if (mat.albedo > 1).any():
-                return mat.albedo
-            newRay = Ray(hitPt, hitPt + mat.reflect(ray, n))
-            return mat.albedo * np.array(self.rayColor(newRay, world, depth-1))
-        else:
-            # return np.array([0,0,0])
-            a = 0.5 * (-np.ravel(ray.unit())[2] + 1.0)
-            return (1.0 - a)*np.array([1, 1, 1]) + a * np.array([0.5, 0.7, 1.0])
+        active_rays = np.ones(num_rays, dtype=bool)  # Mask for active rays
+        remaining_depth = np.full(num_rays, depth)   # Track depth for each ray
+        
+        for d in range(depth):
+            if not active_rays.any():
+                break
+            
+            # Process rays that are still active
+            active_rays_indices = np.where(active_rays)[0]
+            active_rays_batch = [rays[i] for i in active_rays_indices]
+            
+            # Ray-object intersections for the active rays
+            hitSmth, hitData = world.hit(active_rays_batch)
+            
+            # Split hit data
+            hit_dists, hit_ids = hitData[:, 0], hitData[:, 1]
+            
+            # Compute hit points for rays that hit objects
+            hitPts = np.array([rays[i].at(hit_dists[i]) for i in active_rays_indices])
+            
+            # Fetch objects and normals at hit points
+            objs = [world.hittables[hit_ids[i]] for i in active_rays_indices]
+            normals = np.array([objs[i].normal(hitPts[i]) for i in range(len(objs))])
+            mats = np.array([objs[i].material for i in range(len(objs))])
+            
+            # Update colors based on hit object material
+            albedo_mask = np.any(mats.albedo > 1, axis=1)
+            colors[active_rays_indices[albedo_mask]] = mats[albedo_mask].albedo
+            
+            # Compute reflection rays for non-terminal hits
+            reflect_dirs = np.array([mat.reflect(rays[i], normals[i]) for i, mat in enumerate(mats)])
+            new_rays = np.array([Ray(hitPts[i], reflect_dirs[i]) for i in range(len(hitPts))])
+            
+            # Update rays and depth for the next iteration
+            rays = new_rays
+            remaining_depth -= 1
+            
+            # Handle termination condition for depth
+            active_rays[remaining_depth <= 0] = False
+        
+        # For rays that didn't hit anything, use the background color
+        no_hit_mask = np.logical_not(hitSmth)
+        background_rays = rays[no_hit_mask]
+        
+        if background_rays.any():
+            ray_dirs = np.array([ray.unit() for ray in background_rays])
+            a = 0.5 * (-ray_dirs[:, 2] + 1.0)  # Background gradient factor
+            background_colors = (1.0 - a[:, None]) * np.array([1, 1, 1]) + a[:, None] * np.array([0.5, 0.7, 1.0])
+            colors[no_hit_mask] = background_colors
+        
+        return colors
+
         
