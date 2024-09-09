@@ -1,0 +1,9 @@
+*derive intersection equations for a triangle/planar n-gon
+*add support for .stl files
+*implement bounding volume heirarchy
+
+Maybe one day:
+*make GUI
+*progressive rendering
+*realtime GPU rendering
+*interactive controls: adjust camera, object properties via GUI
