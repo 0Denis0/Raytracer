@@ -29,28 +29,32 @@ def main():
     world.add(ball5)
 
     cam1 = Camera(maxDepth=800, imgWidth=1920, vFOV=90, raysPerPixel=255)
-    # # cam1.renderSimple(world)
-    # # cam1.dispImg()
-    # folder = "renders/vid4/"
-    # start = time.time()
-    # speed = 0.05
-    # for i in range(240):
-    #     cam1.updateVars(position=cam1.lookAt + [-8*np.cos(i*speed), -8*np.sin(i*speed), -2])
-    #     cam1.renderParallel(world, save=False)
-    #     frameNum = f"{i:04d}"
-    #     cam1.saveImg(folder, name=f"frame{frameNum}.png")
-    # end = time.time()
-    # parallel_t = end - start
-
-    # print("Frame render time:", parallel_t)
-    # # cam1.dispImg()
-
-    # genVideo("renders/vid4", "renders/vid4/motion.avi")
+    # cam1.renderSimple(world)
+    # cam1.dispImg()
+    folder = "renders/vid5/"
     start = time.time()
-    cam1.renderParallel(world)
-    tot = time.time() - start
-    print(f"Total render time: {tot}.")
-    cam1.dispImg()
+
+    frames = 240
+    speed = 2*np.pi/frames
+
+    for i in range(frames):
+        cam1.updateVars(position=cam1.lookAt + [-8*np.cos(i*speed), -8*np.sin(i*speed), -2])
+        cam1.renderParallel(world, save=False)
+        frameNum = f"{i:04d}"
+        cam1.saveImg(folder, name=f"frame{frameNum}.png")
+    
+    end = time.time()
+    parallel_t = end - start
+    print("Frame render time:", parallel_t)
+    # cam1.dispImg()
+
+    genVideo("renders/vid5", "renders/vid5/motion5.avi")
+    
+    # start = time.time()
+    # cam1.renderParallel(world)
+    # tot = time.time() - start
+    # print(f"Total render time: {tot}.")
+    # cam1.dispImg()
 
 if __name__ == '__main__':
     main()

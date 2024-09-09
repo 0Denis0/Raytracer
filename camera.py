@@ -112,17 +112,59 @@ class Camera:
         return self.renderLine(world, row, du, dv, raysPerPixel)
 
     def renderLine(self, world, row, du, dv, raysPerPixel):
+        """
+        Render a single row of the image using a vectorized approach with NumPy.
+
+        Parameters:
+        -----------
+        world : World object
+            The scene or world containing objects and lights.
+        row : int
+            The row of the image to render.
+        du : float
+            The horizontal pixel size in world coordinates.
+        dv : float
+            The vertical pixel size in world coordinates.
+        raysPerPixel : int
+            The number of rays to shoot per pixel for anti-aliasing.
+
+        Returns:
+        --------
+        imRow : np.ndarray
+            The rendered row as a 1 x width x 3 NumPy array of RGB values.
+        """
         i = row
         imRow = np.zeros((1, self.imgWidth, 3))
-        for j in range(self.imgWidth):
-            for _ in range(raysPerPixel):
-                ray = Ray(self.position, -self.focalLen * self.w 
-                        - 0.5 * self.viewU + du*(j + np.random.random())
-                        - 0.5 * self.viewV + dv*(i + np.random.random()))
-                imRow[0, j] += np.clip(np.sqrt(self.rayColor(ray, world, self.maxDepth)), 0, 1)
-        imRow = imRow/raysPerPixel
-        # print(f"Rendered row {i}.")
+        
+        # Generate j values for each pixel in the row
+        j_values = np.arange(self.imgWidth)
+        
+        # Generate random samples for anti-aliasing (raysPerPixel samples per pixel)
+        jitter_j = j_values[:, None] + np.random.random((self.imgWidth, raysPerPixel))
+        jitter_i = i + np.random.random((self.imgWidth, raysPerPixel))
+        
+        # Compute ray directions for the entire row at once
+        ray_directions = (-self.focalLen * self.w 
+                        - 0.5 * self.viewU + du * jitter_j 
+                        - 0.5 * self.viewV + dv * jitter_i)
+        
+        # Normalize ray directions
+        ray_directions = ray_directions / np.linalg.norm(ray_directions, axis=-1, keepdims=True)
+        
+        # Create an array of rays for each pixel
+        rays = [Ray(self.position, direction) for direction in ray_directions.reshape(-1, 3)]
+        
+        # Compute ray colors for all rays in a vectorized way
+        colors = np.array([self.rayColor(ray, world, self.maxDepth) for ray in rays])
+        
+        # Reshape colors back to (imgWidth, raysPerPixel, 3) and average over raysPerPixel
+        colors = colors.reshape(self.imgWidth, raysPerPixel, 3)
+        
+        # Average colors over the raysPerPixel
+        imRow[0] = np.clip(np.sqrt(np.mean(colors, axis=1)), 0, 1)
+
         return imRow
+
 
     def renderSimple(self, world):
         du = self.viewU/self.imgWidth
