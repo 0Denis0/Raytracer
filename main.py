@@ -48,7 +48,7 @@ def main():
     print("Frame render time:", parallel_t)
     # cam1.dispImg()
 
-    genVideo("renders/vid5", "renders/vid5/motion5.avi")
+    genVideo("renders/vid5", "renders/vid5/motion5.mov")
     
     # start = time.time()
     # cam1.renderParallel(world)

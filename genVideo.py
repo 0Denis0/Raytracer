@@ -32,3 +32,6 @@ def genVideo(imageFolder, videoName):
     # Release everything
     cv2.destroyAllWindows()
     video.release()
+
+if __name__ == '__main__':
+    genVideo("renders/vid4", "renders/vid4/motion4.mov")

@@ -15,7 +15,7 @@ A basic raytracer implemented in Python, inspired by Peter Shirley, Trevor David
 
 Check out a video demonstration of the raytracer in action:
 
-[View Demo Video](assets/motion.avi)
+[View Demo Video](assets/motion.mov)
 
 ## Roadmap
 
