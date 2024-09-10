@@ -6,6 +6,7 @@ import datetime
 from multiprocessing import Pool, cpu_count
 from functools import partial
 import tqdm
+import os
 
 from ray import Ray
 from hittable import Hittable
@@ -77,15 +78,45 @@ class Camera:
         plt.show()
 
     def saveImg(self, dir="renders\\", name=""):
+        """
+        Save the rendered image in full resolution.
+
+        Parameters:
+        -----------
+        dir : str
+            Directory where the image will be saved. Default is 'renders\\'.
+        name : str
+            Name of the image file. If empty, a timestamped name is generated.
+        """
         print("Saving...")
+
+        # Generate default file name if not provided
         if name == "":
             now = datetime.datetime.now()
             t = now.strftime("%Y%m%d_%H%M%S")
-            name = "test" + t + ".png"
-        plt.imshow(self.img)
-        plt.axis('off')
-        plt.savefig(dir + name, bbox_inches='tight')
-        print("Saved.")
+            name = "render_" + t + ".png"
+        
+        # Ensure the directory exists
+        if not os.path.exists(dir):
+            os.makedirs(dir)
+        
+        # Get the image dimensions (height, width)
+        height, width, _ = self.img.shape
+
+        # Create a new figure with the correct size in inches (width / height)
+        fig, ax = plt.subplots(figsize=(width / 100, height / 100), dpi=100)
+        
+        # Display the image without axis
+        ax.imshow(self.img)
+        ax.axis('off')
+
+        # Save the figure in full resolution by setting bbox_inches='tight'
+        plt.savefig(os.path.join(dir, name), bbox_inches='tight', pad_inches=0)
+
+        # Close the figure to free up memory
+        plt.close(fig)
+
+        print(f"Saved image as: {os.path.join(dir, name)}")
 
     def renderParallel(self, world, save=True):
         du = self.viewU/self.imgWidth
