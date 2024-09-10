@@ -6,6 +6,7 @@ import datetime
 from multiprocessing import Pool, cpu_count
 from functools import partial
 import tqdm
+import os
 
 from ray import Ray
 from hittable import Hittable
@@ -76,16 +77,58 @@ class Camera:
         plt.axis('off')
         plt.show()
 
+    # def saveImg(self, dir="renders\\", name=""):
+    #     print("Saving...")
+    #     if name == "":
+    #         now = datetime.datetime.now()
+    #         t = now.strftime("%Y%m%d_%H%M%S")
+    #         name = "test" + t + ".png"
+    #     plt.imshow(self.img)
+    #     plt.axis('off')
+    #     plt.savefig(dir + name, bbox_inches='tight')
+    #     print("Saved.")
+
     def saveImg(self, dir="renders\\", name=""):
+        """
+        Save the rendered image in full resolution.
+
+        Parameters:
+        -----------
+        dir : str
+            Directory where the image will be saved. Default is 'renders\\'.
+        name : str
+            Name of the image file. If empty, a timestamped name is generated.
+        """
         print("Saving...")
+
+        # Generate default file name if not provided
         if name == "":
             now = datetime.datetime.now()
             t = now.strftime("%Y%m%d_%H%M%S")
-            name = "test" + t + ".png"
-        plt.imshow(self.img)
-        plt.axis('off')
-        plt.savefig(dir + name, bbox_inches='tight')
-        print("Saved.")
+            name = "render_" + t + ".png"
+        
+        # Ensure the directory exists
+        if not os.path.exists(dir):
+            os.makedirs(dir)
+        
+        # Get the image dimensions (height, width)
+        height, width, _ = self.img.shape
+
+        # Create a new figure with the correct size in inches (width / height)
+        fig, ax = plt.subplots(figsize=(width / 100, height / 100), dpi=100)
+        
+        # Display the image without axis
+        ax.imshow(self.img)
+        ax.axis('off')
+
+        # Save the figure in full resolution by setting bbox_inches='tight'
+        plt.savefig(os.path.join(dir, name), bbox_inches='tight', pad_inches=0)
+
+        # Close the figure to free up memory
+        plt.close(fig)
+
+        print(f"Saved image as: {os.path.join(dir, name)}")
+
 
     def renderParallel(self, world, save=True):
         du = self.viewU/self.imgWidth
@@ -121,10 +164,10 @@ class Camera:
             The scene or world containing objects and lights.
         row : int
             The row of the image to render.
-        du : float
-            The horizontal pixel size in world coordinates.
-        dv : float
-            The vertical pixel size in world coordinates.
+        du : np.ndarray
+            The horizontal pixel size in world coordinates as a 3D vector.
+        dv : np.ndarray
+            The vertical pixel size in world coordinates as a 3D vector.
         raysPerPixel : int
             The number of rays to shoot per pixel for anti-aliasing.
 
@@ -133,39 +176,55 @@ class Camera:
         imRow : np.ndarray
             The rendered row as a 1 x width x 3 NumPy array of RGB values.
         """
-        i = row
-        imRow = np.zeros((1, self.imgWidth, 3))
+        i = row  # The current row being processed
+        imRow = np.zeros((1, self.imgWidth, 3))  # Initialize output row with zeros
 
-        # Generate pixel indices for the entire row
+        # Generate pixel indices for the entire row (j values for each pixel in this row)
         j_values = np.arange(self.imgWidth)
         
-        # Create jitter for anti-aliasing: random values for each ray within each pixel
-        jitter_j = j_values[:, None] + np.random.random((self.imgWidth, raysPerPixel))
-        jitter_i = i + np.random.random((self.imgWidth, raysPerPixel))
+        # Generate random jitter for each pixel and each ray (to apply anti-aliasing)
+        jitter_j = j_values[:, None] + np.random.random((self.imgWidth, raysPerPixel))  # Horizontal jitter
+        jitter_i = i + np.random.random((self.imgWidth, raysPerPixel))  # Vertical jitter
         
-        # Compute ray directions for the entire row at once
-        ray_directions = (-self.focalLen * self.w
-                        - 0.5 * self.viewU + du * jitter_j
-                        - 0.5 * self.viewV + dv * jitter_i)
+        # Reshape jitter arrays to match the direction vector's shape (3, 1920, 255)
+        jitter_j = jitter_j[np.newaxis, :, :]  # (1, 1920, 255) -> add a new axis for broadcasting
+        jitter_i = jitter_i[np.newaxis, :, :]  # (1, 1920, 255)
+
+        # Reshape du and dv to match the jitter array shape (3, 1, 1) so they can broadcast correctly
+        du = du[:, np.newaxis, np.newaxis]  # Shape becomes (3, 1, 1)
+        dv = dv[:, np.newaxis, np.newaxis]  # Shape becomes (3, 1, 1)
+
+        # Compute ray directions for all rays in the row, accounting for jitter and offsets (du and dv)
+        ray_directions = (
+            -self.focalLen * self.w[:, np.newaxis, np.newaxis]  # Camera direction (w) expanded
+            - 0.5 * self.viewU[:, np.newaxis, np.newaxis]  # Half offset in the U direction
+            + du * jitter_j  # Apply horizontal jitter using du
+            - 0.5 * self.viewV[:, np.newaxis, np.newaxis]  # Half offset in the V direction
+            + dv * jitter_i  # Apply vertical jitter using dv
+        )
         
-        # Normalize ray directions
-        ray_directions = ray_directions / np.linalg.norm(ray_directions, axis=-1, keepdims=True)
-        
-        # Create Ray objects (vectorized)
-        ray_origins = np.tile(self.position, (self.imgWidth * raysPerPixel, 1))  # Same origin for all rays
-        ray_directions = ray_directions.reshape(-1, 3)  # Flatten to get (total_rays, 3)
+        # Normalize ray directions to unit length
+        ray_directions = ray_directions / np.linalg.norm(ray_directions, axis=0, keepdims=True)
+
+        # Create Ray objects (vectorized) - Same origin for all rays, but different directions
+        ray_origins = np.tile(self.position, (self.imgWidth * raysPerPixel, 1))  # Replicate camera position for all rays
+        ray_directions = ray_directions.reshape(3, -1).T  # Flatten ray directions to (total_rays, 3)
+
+        # Create a list of Ray objects (each with an origin and a direction)
         rays = [Ray(ray_origins[i], ray_directions[i]) for i in range(len(ray_origins))]
-        
+
         # Call the vectorized rayColor function with all the rays
         colors = self.rayColor(rays, world, self.maxDepth)
-        
+
         # Reshape the colors back to (imgWidth, raysPerPixel, 3)
         colors = colors.reshape(self.imgWidth, raysPerPixel, 3)
-        
-        # Average over raysPerPixel to get the final color for each pixel
-        imRow[0] = np.clip(np.sqrt(np.mean(colors, axis=1)), 0, 1)
-        
+
+        # Average over the raysPerPixel to get the final color for each pixel
+        imRow[0] = np.clip(np.sqrt(np.mean(colors, axis=1)), 0, 1)  # Apply gamma correction (sqrt) and clip the values
+
         return imRow
+
+
 
     def renderSimple(self, world):
         du = self.viewU/self.imgWidth
