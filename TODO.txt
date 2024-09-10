@@ -1,6 +1,7 @@
 *derive intersection equations for a triangle/planar n-gon
 *add support for .stl files
 *implement bounding volume heirarchy
+*vectorize to get SIMD speed boost?
 
 Maybe one day:
 *make GUI
