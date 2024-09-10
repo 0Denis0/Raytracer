@@ -277,7 +277,7 @@ class Camera:
             hitSmth, hitData = world.hit(active_rays_batch)
             
             # Split hit data
-            hit_dists, hit_ids = hitData[:, 0], hitData[:, 1]
+            hit_dists, hit_ids = hitData
             
             # Compute hit points for rays that hit objects
             hitPts = np.array([rays[i].at(hit_dists[i]) for i in active_rays_indices])
@@ -288,8 +288,9 @@ class Camera:
             mats = np.array([objs[i].material for i in range(len(objs))])
             
             # Update colors based on hit object material
-            albedo_mask = np.any(mats.albedo > 1, axis=1)
-            colors[active_rays_indices[albedo_mask]] = mats[albedo_mask].albedo
+            albedo_values = np.array([mat.albedo for mat in mats])
+            albedo_mask = np.any(albedo_values > 1, axis=1)
+            colors[active_rays_indices[albedo_mask]] = albedo_values[albedo_mask]
             
             # Compute reflection rays for non-terminal hits
             reflect_dirs = np.array([mat.reflect(rays[i], normals[i]) for i, mat in enumerate(mats)])
@@ -307,7 +308,7 @@ class Camera:
         background_rays = rays[no_hit_mask]
         
         if background_rays.any():
-            ray_dirs = np.array([ray.unit() for ray in background_rays])
+            ray_dirs = np.array([ray.unit() for ray in background_rays]).reshape(-1, 3)
             a = 0.5 * (-ray_dirs[:, 2] + 1.0)  # Background gradient factor
             background_colors = (1.0 - a[:, None]) * np.array([1, 1, 1]) + a[:, None] * np.array([0.5, 0.7, 1.0])
             colors[no_hit_mask] = background_colors

@@ -28,7 +28,7 @@ def main():
     world.add(ball4)
     world.add(ball5)
 
-    cam1 = Camera(maxDepth=800, imgWidth=1920, vFOV=90, raysPerPixel=255)
+    cam1 = Camera(maxDepth=10, imgWidth=1920, vFOV=90, raysPerPixel=255)
     # cam1.renderSimple(world)
     # cam1.dispImg()
     folder = "renders/vid5/"

@@ -1,3 +1,5 @@
+import numpy as np
+
 from ray import Ray
 from sphere import Sphere
 import materials
@@ -12,20 +14,41 @@ class Hittable:
     def clear(self):
             self.hittables = []
 
-    def hit(self, ray):
-        hitAnything = False
-        objHit = -1
-        tempClosest = 4096
+    def hit(self, rays):
+        """
+        Check for intersections between the world (all objects) and multiple rays using vectorized operations.
 
+        Parameters:
+        -----------
+        rays : list or np.ndarray of Ray objects
+            A list or array of rays, where each ray has an origin and direction.
+
+        Returns:
+        --------
+        hitAnything : np.ndarray
+            Boolean array indicating if each ray hit any object.
+        hitData : tuple of (np.ndarray, np.ndarray)
+            - Closest intersection distances for each ray.
+            - Object indices of the closest object hit by each ray.
+        """
+        num_rays = len(rays)
+        closest_dists = np.full(num_rays, 4096.0)  # Large value for initial closest distance
+        obj_indices = np.full(num_rays, -1)  # -1 indicates no object hit
+
+        # Iterate over all hittable objects
         for i, obj in enumerate(self.hittables):
-            currHit = obj.hit(ray)
-            if(currHit > 0.00001):
-                 hitAnything = True
-                 if currHit < tempClosest:
-                     tempClosest = currHit
-                     objHit = i
-        
-        return hitAnything, (tempClosest, objHit)
+            # Get intersection distances for the current object
+            dists = obj.hit(rays)  # Vectorized hit check for all rays
+
+            # Update closest hits
+            hit_mask = (dists > 0.00001) & (dists < closest_dists)
+            closest_dists[hit_mask] = dists[hit_mask]
+            obj_indices[hit_mask] = i
+
+        hitAnything = obj_indices != -1  # Boolean array: True if a ray hit something
+
+        return hitAnything, (closest_dists, obj_indices)
+
 
 
     def rayColor(self, ray):
