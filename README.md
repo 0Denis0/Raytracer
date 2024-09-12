@@ -8,8 +8,8 @@ A basic raytracer implemented in Python, inspired by Peter Shirley, Trevor David
 
 - Custom Python implementation with original derivations
 - Currently supports rendering of spheres
+- Supports light sources and multiple materials
 - Derivations completed for triangles and other convex planar n-gons (implementation in progress)
-- Vectorized implementations in development
 
 ## Demo
 
@@ -21,12 +21,11 @@ Check out a video demonstration of the raytracer in action:
 
 ### In Progress
 - Implementation of triangle and planar n-gon rendering
-- Support for .stl files
 - Vectorized implementations for improved performance
 
 ### Planned Features
 - Bounding Volume Hierarchy (BVH) for optimization
-- SIMD vectorization for speed boost
+- Support for .stl files
 
 ### Future Possibilities
 - GUI for easier interaction

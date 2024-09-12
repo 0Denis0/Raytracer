@@ -94,7 +94,7 @@ class Camera:
         if name == "":
             now = datetime.datetime.now()
             t = now.strftime("%Y%m%d_%H%M%S")
-            name = "render_" + t + ".png"
+            name = "test" + t + ".png"
         
         # Ensure the directory exists
         if not os.path.exists(dir):

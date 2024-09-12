@@ -106,14 +106,14 @@ if __name__ == "__main__":
     # output_gif_path = 'renders/vid5/motionFromMov.gif'
     # mov_to_gif(input_mov_path, output_gif_path, fps = 30)
 
-    # # Example usage
-    # png_folder_path = 'renders\\vid5'
-    # output_gif_path = 'renders/vid5/motionFromPngs.gif'
-    # pngs_to_gif(png_folder_path, output_gif_path, fps=30)
+    # Example usage
+    png_folder_path = 'renders\\vid5'
+    output_gif_path = 'renders/vid5/motionFromPngs.gif'
+    pngs_to_gif(png_folder_path, output_gif_path, fps=30)
 
-    i = 1
-    folder = "renders/vid5/"
-    frameNum = f"{i:04d}"
-    fileName = os.path.join(folder, f"frame{frameNum}.png")
-    if os.path.exists(fileName):
-        print(f"{fileName} exists in {folder}")
+    # i = 1
+    # folder = "renders/vid5/"
+    # frameNum = f"{i:04d}"
+    # fileName = os.path.join(folder, f"frame{frameNum}.png")
+    # if os.path.exists(fileName):
+    #     print(f"{fileName} exists in {folder}")
