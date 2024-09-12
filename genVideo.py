@@ -99,6 +99,63 @@ def pngs_to_gif(png_folder, output_gif, ffmpeg_location="C:/ffmpeg/bin/ffmpeg.ex
     except subprocess.CalledProcessError as e:
         print(f"Error during GIF creation: {e}")
 
+import os
+import subprocess
+
+def pngs_to_gif_highRes(png_folder, output_gif, ffmpeg_location="C:/ffmpeg/bin/ffmpeg.exe", fps=10):
+    """
+    Convert a folder of .png images to a high-quality .gif using ffmpeg.
+
+    :param png_folder: Path to the folder containing .png images.
+    :param output_gif: The desired path to the output .gif file.
+    :param ffmpeg_location: The path to the ffmpeg executable.
+    :param fps: Frames per second for the GIF (default 10).
+    """
+    # Ensure the input folder exists
+    if not os.path.exists(png_folder):
+        print(f"Error: The folder '{png_folder}' does not exist.")
+        return
+
+    # Ensure the folder contains .png files
+    png_files = [f for f in sorted(os.listdir(png_folder)) if f.endswith('.png')]
+    if not png_files:
+        print(f"Error: No .png files found in folder '{png_folder}'.")
+        return
+
+    # Create an input pattern for ffmpeg (assumes sequential naming like frame0001.png, frame0002.png, ...)
+    input_pattern = os.path.join(png_folder, 'frame%04d.png')
+    
+    # Generate a palette to improve GIF color quality
+    palette = os.path.join(png_folder, 'palette.png')
+
+    # Build ffmpeg commands to first create a palette and then create the gif using that palette
+    ffmpeg_palette_command = [
+        ffmpeg_location,                 # Path to ffmpeg executable
+        '-framerate', str(fps),          # Frames per second
+        '-i', input_pattern,             # Input pattern for PNG files
+        '-vf', 'palettegen',             # Generate a color palette
+        '-y', palette                    # Output palette file
+    ]
+    
+    ffmpeg_gif_command = [
+        ffmpeg_location,                 # Path to ffmpeg executable
+        '-framerate', str(fps),          # Frames per second
+        '-i', input_pattern,             # Input pattern for PNG files
+        '-i', palette,                   # Use the generated palette
+        '-lavfi', 'paletteuse',          # Apply the palette to improve color quality
+        '-y', output_gif                 # Output GIF file (overwrite)
+    ]
+
+    # Run the ffmpeg commands using subprocess
+    try:
+        # Step 1: Generate the color palette
+        subprocess.run(ffmpeg_palette_command, check=True)
+        # Step 2: Create the GIF using the generated palette
+        subprocess.run(ffmpeg_gif_command, check=True)
+        print(f"High-quality GIF created successfully: {output_gif}")
+    except subprocess.CalledProcessError as e:
+        print(f"Error during GIF creation: {e}")
+
 
 if __name__ == "__main__":
     # # Example usage
@@ -108,8 +165,9 @@ if __name__ == "__main__":
 
     # Example usage
     png_folder_path = 'renders\\vid5'
-    output_gif_path = 'renders/vid5/motionFromPngs.gif'
-    pngs_to_gif(png_folder_path, output_gif_path, fps=30)
+    output_gif_path = 'renders/vid5/motionFromPngs_highRes.gif'
+    # pngs_to_gif(png_folder_path, output_gif_path, fps=30)
+    pngs_to_gif_highRes(png_folder_path, output_gif_path, fps=30)
 
     # i = 1
     # folder = "renders/vid5/"
